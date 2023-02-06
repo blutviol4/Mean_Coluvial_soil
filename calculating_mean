@@ -1,0 +1,77 @@
+getwd()
+library(tidyverse)
+
+data1 <- read.csv("10501_10p_fin.csv", header=TRUE, stringsAsFactors=FALSE)
+data2 <- read.csv("10501-50p_dat.csv", header=TRUE, stringsAsFactors=FALSE)
+data3 <- read.csv("10502_10p_dat_Fin.csv", header=TRUE, stringsAsFactors=FALSE)
+data4 <- read.csv("10502_50p_dat_Fin.csv", header=TRUE, stringsAsFactors=FALSE)
+data5 <- read.csv("10503_10p_FIN.csv", header=TRUE, stringsAsFactors=FALSE)
+data6 <- read.csv("10503_50P_FIN.csv", header=TRUE, stringsAsFactors=FALSE)
+data7 <- read.csv("1501001_10P_Fin.csv", header=TRUE, stringsAsFactors=FALSE)
+data8 <- read.csv("1501001_50p_Fin.csv", header=TRUE, stringsAsFactors=FALSE)
+data9 <- read.csv("1501002_10p_Fin.csv", header=TRUE, stringsAsFactors=FALSE)
+data10 <- read.csv("1501002_50p_dat_Fin.csv", header=TRUE, stringsAsFactors=FALSE)
+data11 <- read.csv("1501003_10p_Fin.csv", header=TRUE, stringsAsFactors=FALSE)
+data12 <- read.csv("1501003_50p_Fin.csv", header=TRUE, stringsAsFactors=FALSE)
+
+a<-data1%>%
+  group_by(id) %>%
+  summarise_if(is.numeric, mean)
+write.csv(a, "10501_10p.csv", row.names=FALSE)
+
+
+b<-data2%>%
+  group_by(id) %>%
+  summarise_if(is.numeric, mean)
+write.csv(b, "10501-50p.csv", row.names=FALSE)
+
+
+c<-data3%>%
+  group_by(id) %>%
+  summarise_if(is.numeric, mean)
+write.csv(c, "10502_10p.csv", row.names=FALSE)
+
+d<-data4%>%
+  group_by(id) %>%
+  summarise_if(is.numeric, mean)
+write.csv(d, "10502_50p.csv", row.names=FALSE)
+
+e<-data5%>%
+  group_by(id) %>%
+  summarise_if(is.numeric, mean)
+write.csv(e, "10503_10p.csv", row.names=FALSE)
+
+f<-data6%>%
+  group_by(id) %>%
+  summarise_if(is.numeric, mean)
+write.csv(f, "10503_50P.csv", row.names=FALSE)
+
+g<-data7%>%
+  group_by(id) %>%
+  summarise_if(is.numeric, mean)
+write.csv(g, "1501001_10P.csv", row.names=FALSE)
+
+h<-data8%>%
+  group_by(id) %>%
+  summarise_if(is.numeric, mean)
+write.csv(h, "1501001_50p.csv", row.names=FALSE)
+
+i<-data9%>%
+  group_by(id) %>%
+  summarise_if(is.numeric, mean)
+write.csv(i, "1501002_10p.csv", row.names=FALSE)
+
+j<-data10%>%
+  group_by(id) %>%
+  summarise_if(is.numeric, mean)
+write.csv(j, "1501002_50p.csv", row.names=FALSE)
+
+k<-data11%>%
+  group_by(id) %>%
+  summarise_if(is.numeric, mean)
+write.csv(k, "1501003_10p.csv", row.names=FALSE)
+
+l<-data12%>%
+  group_by(id) %>%
+  summarise_if(is.numeric, mean)
+write.csv(l, "1501003_50p.csv", row.names=FALSE)
