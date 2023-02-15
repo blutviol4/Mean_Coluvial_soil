@@ -1,0 +1,22 @@
+###################### savitzkyGolay filtering######################
+
+###################### 10501 ######################
+
+library(hyperSpec)
+library(ggplot2)
+
+library(tidyverse)
+data1 <- read.csv("10501_50p.csv", header=TRUE, stringsAsFactors=FALSE)
+n<- data1 %>% select(5:814)
+dev.off()
+
+# p = polynomial order w = window size (must be odd) m = m-th derivative (0 =
+# smoothing) The function accepts vectors, data.frames or matrices.  For a
+# matrix input, observations should be arranged row-wise
+sgvec <- savitzkyGolay(X = n[1, ], p = 3, w = 11, m = 0)
+sg <- savitzkyGolay(X = n, p = 3, w = 11, m = 0)
+# note that bands at the edges of the spectral matrix are lost !
+dim(n)
+dim(sg)
+
+write.csv(sg, "10501_Savitk.csv", row.names=FALSE)
