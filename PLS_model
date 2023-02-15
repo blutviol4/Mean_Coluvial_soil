@@ -1,0 +1,80 @@
+
+######################PLS 
+
+data1 <- read.csv("1501001_Savitzk.csv", header=TRUE, stringsAsFactors=FALSE)
+
+install.packages("mdatools")
+library(mdatools)
+
+idx = seq(3, 9, 3)
+Xc = data1[-idx, -1]
+show(Xc)
+yc = data1[-idx, 1, drop = FALSE]
+Xt = data1[idx, -1]
+yt = data1[idx, 1, drop = FALSE]
+
+m = pls(Xc, yc, 7, scale = TRUE, info = "SOC % prediction model")
+
+m = pls(Xc, yc, 7, scale = TRUE, cv = 1, info = "SOC (%) prediction model")
+m = selectCompNum(m, 3)
+print(m)
+
+
+##############Regression coefficients
+
+par(mfrow = c(2, 2))
+plotRegcoeffs(m)
+plotRegcoeffs(m, ncomp = 2)
+plot(m$coeffs, ncomp = 3, type = "b", show.labels = TRUE)
+plot(m$coeffs, ncomp = 2)
+
+show(m$coeffs$values[, 3, 1])
+
+summary(m$coeffs)
+
+####You can also get the corrected coefficients, which can be applied 
+####directly to the raw data (without centering and standardization), 
+####by using method getRegcoeffs():
+
+show(getRegcoeffs(m, ncomp = 3))
+
+####Result objec
+print(m$res$cal)
+
+print(m$res$cal$xdecomp)
+
+res = predict(m, Xt, yt)
+print(res)
+
+m1 = pls(Xc, yc, 7, scale = TRUE, cv = 1, ncomp.selcrit = "min")
+show(m1$ncomp.selected)
+
+m2 = pls(Xc, yc, 7, scale = TRUE, cv = 1, ncomp.selcrit = "wold")
+show(m2$ncomp.selected)
+
+par(mfrow = c(1, 2))
+plotRMSE(m1)
+plotRMSE(m2)
+
+
+#Another useful plot in this case is a 
+#plot which shows ratio between cross-validated RMSE values, RMSECV, 
+par(mfrow = c(1, 2))
+plotRMSERatio(m1)
+plotRMSERatio(m2, pch = 1, col = "red")
+
+summary(m1)
+
+summary(m1$res$cal)
+
+par(mfrow = c(1, 2))
+plotPredictions(m1)
+plotPredictions(m1, ncomp = 1)
+
+
+par(mfrow = c(2, 2))
+plotPredictions(m1$res$cal)
+plotPredictions(m1$res$cal, ncomp = 2)
+plotPredictions(m1$res$cal, show.stat = TRUE)
+plotPredictions(m1$res$cal, ncomp = 2, show.stat = TRUE)
+plot(m1)
