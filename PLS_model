@@ -1,10 +1,7 @@
-
-######################PLS 
-
-data1 <- read.csv("1501001_Savitzk.csv", header=TRUE, stringsAsFactors=FALSE)
-
-install.packages("mdatools")
+#####################PLS#####################
+#install.packages("mdatools")
 library(mdatools)
+data1 <- read.csv("GA-400-810.csv", header=TRUE, stringsAsFactors=FALSE)
 
 idx = seq(3, 9, 3)
 Xc = data1[-idx, -1]
@@ -12,13 +9,16 @@ show(Xc)
 yc = data1[-idx, 1, drop = FALSE]
 Xt = data1[idx, -1]
 yt = data1[idx, 1, drop = FALSE]
+##So Xc and yc are predictors and response values for calibration subset. 
+##Now let’s calibrate the model and show an information about the model object
 
-m = pls(Xc, yc, 7, scale = TRUE, info = "SOC % prediction model")
-
-m = pls(Xc, yc, 7, scale = TRUE, cv = 1, info = "SOC (%) prediction model")
+m = pls(Xc, yc, 7, scale = TRUE, info = "SOC prediction model")
 m = selectCompNum(m, 3)
 print(m)
 
+##When you calibrate PLS model the calibration also tries to find the optimal 
+##number (details will be discussed later in this chapter) and this needs
+##some validation.
 
 ##############Regression coefficients
 
@@ -38,43 +38,138 @@ summary(m$coeffs)
 
 show(getRegcoeffs(m, ncomp = 3))
 
-####Result objec
-print(m$res$cal)
+##You can also get the corrected coefficients, which can be applied directly
+##to the raw data (without centering and standardization), by using method getRegcoeffs()
 
+####Result objec
+##Similar to PCA, model object contains list with result objects (res), 
+##obtained using calibration set (cal), cross-validation (cv) 
+##and test set validation (test).
+##All three have class plsres, here is how res$cal looks like:
+
+print(m$res$cal)
+##The xdecomp and ydecomp are objects similar to pcares, they contain scores, 
+##residuals and variances for decomposition of X and Y correspondingly.
 print(m$res$cal$xdecomp)
 
+##PLS predictions for a new set can be obtained using method predict:
 res = predict(m, Xt, yt)
 print(res)
 
+##########################################Validation
+
+m = pls(Xc, yc, 7, scale = TRUE, info = "Shoesize prediction model")
+
 m1 = pls(Xc, yc, 7, scale = TRUE, cv = 1, ncomp.selcrit = "min")
 show(m1$ncomp.selected)
-
 m2 = pls(Xc, yc, 7, scale = TRUE, cv = 1, ncomp.selcrit = "wold")
 show(m2$ncomp.selected)
+
+##And here are the RMSE plots (they are identical of course), 
+##where you can see how error depends on number of components for both 
+##calibration set and cross-validated predictions.
+##Apparently the minimum for cross-validation error (RMSECV) is indeed at 5:
 
 par(mfrow = c(1, 2))
 plotRMSE(m1)
 plotRMSE(m2)
 
-
-#Another useful plot in this case is a 
-#plot which shows ratio between cross-validated RMSE values, RMSECV, 
+##Another useful plot in this case is a plot which shows ratio between cross-validated RMSE
+##values, RMSECV, and the calibrated ones, RMSEC. You can see 
+##an example in the figure below and read more about this plot in blog post by Barry M. Wise.
 par(mfrow = c(1, 2))
 plotRMSERatio(m1)
 plotRMSERatio(m2, pch = 1, col = "red")
 
-summary(m1)
+##Method summary() for validated model shows performance statistics calculated using 
+##optimal number of components for each of the results
+##(calibration, cross-validation, test set — if the last two are used of course).
 
+summary(m1)
 summary(m1$res$cal)
+##############################################Plotting methods
 
 par(mfrow = c(1, 2))
 plotPredictions(m1)
 plotPredictions(m1, ncomp = 1)
 
-
+##By the way, when plotPredictions() is made for results object, you can show performance statistics on the plot:
 par(mfrow = c(2, 2))
 plotPredictions(m1$res$cal)
 plotPredictions(m1$res$cal, ncomp = 2)
 plotPredictions(m1$res$cal, show.stat = TRUE)
 plotPredictions(m1$res$cal, ncomp = 2, show.stat = TRUE)
+
 plot(m1)
+
+
+########################################Variable selection
+
+###The first two are VIP-scores (variables important for projection) and Selectivity ratio. All details and theory can be found e.g
+###Here is an example of corresponding plots.
+
+par(mfrow = c(2, 2))
+plotVIPScores(m1)
+VIP<-vipscores(m1)
+write.csv(VIP, "VIP.csv", row.names=FALSE)
+plotVIPScores(m1, ncomp = 2, type = "h", show.labels = TRUE)
+plotSelectivityRatio(m1)
+plotSelectivityRatio(m1, ncomp = 2, type = "h", show.labels = TRUE)
+
+##To compute the values without plotting use vipscores() and selratio() functions. 
+##In the example below, I create two other PLS models by excluding variables with VIP 
+##score or selectivity ratio below a threshold 
+##(I use 1 and 3 correspondingly) and show the performance for both.
+
+vip = vipscores(m1, ncomp = 2)
+m3 = pls(Xc, yc, 4, scale = T, cv = 1, exclcols = (vip < 0.5))
+summary(m3)
+
+sr = selratio(m1, ncomp = 2)
+m4 = pls(Xc, yc, 4, scale = T, cv = 1, exclcols = (sr < 2))
+summary(m4)
+
+
+##Another way is to make an inference about regression coefficients and calculate confidence
+##intervals and p-values for each variable. This can be done using Jack-Knife approach, when model is cross-validated using efficient number of segments (at least ten) and statistics 
+##are calculated using the distribution of regression coefficient values obtained for each step
+
+mjk = pls(Xc, yc, 7, scale = TRUE, cv = 1)
+
+par(mfrow = c(2, 2))
+plotRegcoeffs(mjk, type = "h", show.ci = TRUE, show.labels = TRUE)
+plotRegcoeffs(mjk, ncomp = 2, type = "h", show.ci = TRUE, show.labels = TRUE)
+plotRegcoeffs(mjk, type = "l", show.ci = TRUE, show.labels = TRUE)
+plotRegcoeffs(mjk, ncomp = 2, type = "l", show.ci = TRUE, show.labels = TRUE)
+
+##Calling function summary() for regression coefficients allows to get all calculated statistics.
+summary(mjk$coeffs, ncomp = 2)
+
+summary(mjk$coeffs, ncomp = 2, alpha = 0.01)
+
+
+##Function getRegcoeffs() in this case may also return corresponding t-value, 
+##standard error, p-value, and confidence interval for each of the coefficient 
+##(except intercept) if user specifies a parameter full. The standard error and 
+##confidence intervals are 
+##also computed for raw, non-standardized, variables (similar to coefficients).
+show(getRegcoeffs(mjk, ncomp = 2, full = TRUE))
+
+##It is also possible to change significance level for confidence intervals.
+
+show(getRegcoeffs(mjk, ncomp = 2, full = TRUE, alpha = 0.01))
+
+##The p-values, t-values and standard errors are stored each as a 3-way array similar
+##to regression coefficients. The selection can be made by comparing e.g. 
+##p-values with a threshold similar to what we have done with VIP-scores and selectivity ratio.
+
+exclcols = mjk$coeffs$p.values[, 2, 1] > 0.05
+show(exclcols)
+
+##Here p.values[, 2, 1] means values for all predictors, model with two components, first y-variable.
+newm = pls(Xc, yc, 3, scale = TRUE, cv = 1, exclcols = exclcols)
+summary(newm)
+
+show(getRegcoeffs(newm))
+
+
