@@ -1,0 +1,42 @@
+
+# # # # # # # # # # # # # # # # # PREPROCESING 
+# # #1. convert reflectance to aparent absorvance
+
+library(mdatools)
+library(tidyverse)
+
+data1 <- read.csv("GA-1050-1001.csv", header=TRUE, stringsAsFactors=FALSE)
+n<- data1 %>% select(5:814)
+w<-c(1:810)
+
+prep.list()
+
+Xc<-n
+attr(Xc, "xaxis.values") <- w
+attr(Xc, "xaxis.name") <- "Wavelength, nm"
+
+
+# create a function for converting Reflectance to Adsorbance
+r2a <- function(data) return(log(1/abs(data)))
+
+# compute mean spectrum for calibration set
+#ms <- apply(Xc, 2, mean)
+
+# create a sequence of preprocessing methods (use 3 metodos, 1. convert reflectance to abserovance; 2. savtzkygolay; 3.standart normal vairate )
+myprep <- list(
+  prep("r2a", method = r2a),# convert reflectance to adsorvance
+  #prep("msc", list(mspectrum = ms)),
+  prep("savgol", list(width = 5, porder = 1, dorder = 1)),# Filtro SavitzkyGolay
+  prep("snv"))#Standard Normal Variate (SNV)
+)
+Xcp <- employ.prep(myprep, Xc)
+
+par(mfrow = c(2, 1))
+mdaplot(Xc, type = "l", xlim = c(0, 800))#original 
+mdaplot(Xcp, type = "l", xlim = c(0, 800))#corregida
+
+par(mfrow = c(2, 2))
+mdaplot(Xc, type = "l", main = "Calibration set, raw")
+mdaplot(Xcp, type = "l", main = "Calibration set, preprocessed")
+
+write.csv(Xcp, "Xcp.csv", row.names=FALSE)
