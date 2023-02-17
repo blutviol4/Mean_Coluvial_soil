@@ -1,0 +1,74 @@
+# # # # # # # # # PCR: Principal component regression
+
+
+library(tidyverse)
+install.packages("caret")
+library(caret)
+install.packages("pls")
+library(pls)
+
+data1 <- read.csv("Xcp_Var_selected.csv", header=TRUE, stringsAsFactors=FALSE)
+
+# Split the data into training and test set
+set.seed(123)
+training.samples <- data1$SOC %>%
+  createDataPartition(p = 0.7, list = FALSE)
+train.data  <- data1[training.samples, ]
+test.data <- data1[-training.samples, ]
+
+
+#Computing principal component regression
+
+set.seed(123)
+model <- train(
+  SOC~., data = train.data, method = "pcr",
+  scale = TRUE,
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 10
+)
+# Plot model RMSE vs different values of components
+plot(model)
+# Print the best tuning parameter ncomp that
+# minimize the cross-validation error, RMSE
+model$bestTune
+
+
+# Summarize the final model
+summary(model$finalModel)
+# Make predictions
+predictions <- model %>% predict(test.data)
+# Model performance metrics
+data.frame(
+  RMSE = caret::RMSE(predictions, test.data$SOC),
+  Rsquare = caret::R2(predictions, test.data$SOC)
+)
+
+
+###############################V Computing partial least squares
+
+# Build the model on training set
+set.seed(123)
+model2 <- train(
+  SOC~., data = train.data, method = "pls",
+  scale = TRUE,
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 10
+)
+# Plot model RMSE vs different values of components
+plot(model2)
+# Print the best tuning parameter ncomp that
+# minimize the cross-validation error, RMSE
+model$bestTune
+
+# Summarize the final model
+summary(model2$finalModel)
+
+# Make predictions
+predictions <- model %>% predict(test.data)
+# Model performance metrics
+data.frame(
+  RMSE = caret::RMSE(predictions, test.data$SOC),
+  Rsquare = caret::R2(predictions, test.data$SOC)
+)
+
+
