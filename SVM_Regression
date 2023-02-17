@@ -1,0 +1,140 @@
+#############################Support Vector Machine regression 
+
+library(MASS)
+data1 <- read.csv("Xcp_Var_selected.csv", header=TRUE, stringsAsFactors=FALSE)
+
+#data(Boston)
+
+#str(Boston)
+
+####################################Basic SVM Regression in R
+#install.packages("e1071")
+library(e1071)
+model = svm(SOC ~ ., data = data1)
+print(model)
+
+##############################vModeling Linear Regression in R with Caret
+set.seed(1)
+
+library(caret)
+library(kernlab)
+
+model <- train(
+  SOC ~ .,
+  data = data1,
+  method = 'svmRadial'
+)
+
+model
+
+############################Preprocessing with Caret
+
+set.seed(1)
+
+model2 <- train(
+  SOC ~ .,
+  data = data1,
+  method = 'svmRadial',
+  preProcess = c("center", "scale")
+)
+model2
+
+############################Splitting the Data Set
+#####Often when we are modeling, we want to split our data into a train and test set. 
+#####s way, we can check for overfitting. 
+
+
+set.seed(1)
+
+inTraining <- createDataPartition(data1$SOC, p = .80, list = FALSE)
+training <- data1[inTraining,]
+testing  <- data1[-inTraining,]
+
+set.seed(1)
+
+model3 <- train(
+  SOC ~ .,
+  data = training,
+  method = 'svmRadial',
+  preProcess = c("center", "scale")
+)
+model3
+
+##Now, we want to check our data on the test set. We can use the subset method to get
+##the features and test target. 
+##We then use the predict method passing in our model from above and the test features.
+
+
+##Finally, we calculate the RMSE and r2 to compare to the model above.
+test.features = subset(testing, select=-c(SOC))
+test.target = subset(testing, select=SOC)[,1]
+
+predictions = predict(model3, newdata = test.features)
+
+# RMSE
+sqrt(mean((test.target - predictions)^2))
+
+# R2
+cor(test.target, predictions) ^ 2
+
+
+##################################Cross Validation
+
+#It is common to use a data partitioning strategy like k-fold cross-validation 
+#at resamples and splits our data many times. We then train the model on these 
+#samples and pick the best model.
+#Caret makes this easy with the trainControl method.
+set.seed(1)
+ctrl <- trainControl(
+  method = "cv",
+  number = 10,
+)
+#Now, we can retrain our model and pass the trainControl response to the trControl parameter. 
+#notice the our call has added trControl = set.seed.
+
+set.seed(1)
+
+model4 <- train(
+  SOC ~ .,
+  data = testing,
+  method = 'svmRadial',
+  preProcess = c("center", "scale"),
+  trCtrl = ctrl
+)
+model4
+
+#This results seemed to have improved our accuracy for our training data. 
+#Let’s check this on the test data to see the results.
+
+test.features = subset(testing, select=-c(SOC))
+test.target = subset(testing, select=SOC)[,1]
+
+predictions = predict(model4, newdata = test.features)
+
+# RMSE
+sqrt(mean((test.target - predictions)^2))
+# R2
+cor(test.target, predictions) ^ 2
+
+# # # # # # # # # # # # # # # Tuning Hyper Parameters
+#To tune a svm model, we can give the model different values of C which represents cost and sigma. 
+#Caret will retrain the model using different lambdas and select the best version
+set.seed(1)
+
+tuneGrid <- expand.grid(
+  C = c(0.25, .5, 1),
+  sigma = 0.1
+)
+
+model5 <- train(
+  SOC ~ .,
+  data = training,
+  method = 'svmRadial',
+  preProcess = c("center", "scale"),
+  trControl = ctrl,
+  tuneGrid = tuneGrid
+)
+model5
+
+#Finally, we can again plot the model to see how it performs over different tuning parameters.
+plot(model5)
