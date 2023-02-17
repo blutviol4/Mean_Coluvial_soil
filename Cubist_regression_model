@@ -1,0 +1,128 @@
+#############################CUBIST REGRESSION MODELS
+####https://cran.r-project.org/web/packages/Cubist/vignettes/cubist.html
+
+install.packages('Cubist')
+library(Cubist)
+install.packages("modeldata")
+
+##data(ames, package = "modeldata")
+data1 <- read.csv("Xcp_Var_selected.csv", header=TRUE, stringsAsFactors=FALSE)
+# model the data on the log10 scale
+#data1$SOC <- log10(data1$SOC)
+set.seed(11)
+in_train_set <- sample(1:nrow(data1), floor(.8*nrow(data1)))
+
+colnames(data1)
+
+predictors<-c("X8", "X9", "X14", "X24","X52","X76","X91","X95","X97","X139", "X140", "X143", "X159",
+               "X172" ,"X184", "X185", "X199","X207", "X214", "X215", "X243", "X263", "X266", "X311", "X321", "X324", "X331",
+              "X340" ,"X344", "X353", "X362", "X364", "X406", "X414", "X415", "X445", "X448", "X564", "X566", "X575", "X579",
+              "X582" ,"X610","X635", "X671", "X711", "X716", "X722", "X747", "X760", "X778", "X784", "X795", "X802", "X803")
+
+#predictors <- 
+# c("Lot_Area", "Alley", "Lot_Shape", "Neighborhood", "Bldg_Type", 
+#   "Year_Built", "Total_Bsmt_SF", "Central_Air", "Gr_Liv_Area", 
+#   "Bsmt_Full_Bath", "Bsmt_Half_Bath", "Full_Bath", "Half_Bath", 
+#  "TotRms_AbvGrd",  "Year_Sold", "Longitude", "Latitude")
+
+data1$SOC <- log10(data1$SOC)
+train_pred <- data1[ in_train_set, predictors]
+test_pred  <- data1[-in_train_set, predictors]
+
+train_resp <- data1$SOC[ in_train_set]
+test_resp  <- data1$SOC[-in_train_set]
+
+model_tree <- cubist(x = train_pred, y = train_resp)
+model_tree
+summary(model_tree)
+
+model_tree_pred <- predict(model_tree, test_pred)
+## Test set RMSE
+sqrt(mean((model_tree_pred - test_resp)^2))
+
+## Test set R^2
+cor(model_tree_pred, test_resp)^2
+
+
+###################################Ensembles By Committees
+
+set.seed(1)
+com_model <- cubist(x = train_pred, y = train_resp, committees = 3)
+summary(com_model)
+#For this model:
+com_pred <- predict(com_model, test_pred)
+## RMSE
+sqrt(mean((com_pred - test_resp)^2))
+
+## R^2
+cor(com_pred, test_resp)^2
+
+
+###################################Instance-Based Corrections
+
+##Another innovation in Cubist using nearest-neighbors to adjust the predictions from 
+##the rule-based model. First, a model tree (with or without committees) is created.
+##Once a sample is predicted by this model, 
+##Cubist can find it’s nearest neighbors and determine the average of these training set points
+
+inst_pred <- predict(com_model, test_pred, neighbors = 5)
+## RMSE
+sqrt(mean((inst_pred - test_resp)^2))
+
+## R^2
+cor(inst_pred, test_resp)^2
+
+##Model tuning
+
+summary(model_tree)
+install.packages("tidyrules")
+library(tidyrules)
+
+tr <- tidyRules(model_tree)
+tr
+
+tr[, c("LHS", "RHS")]
+
+# lets look at 7th rule
+tr$LHS[7]
+tr$RHS[7]
+#These results can be used to look at specific parts of the data. For example, the 7th rule predictions are:
+
+library(dplyr)
+library(rlang)
+
+char_to_expr <- function(x, index = 1, model = TRUE) {
+  x <- x %>% dplyr::slice(index) 
+  if (model) {
+    x <- x %>% dplyr::pull(RHS) %>% rlang::parse_expr()
+  } else {
+    x <- x %>% dplyr::pull(LHS) %>% rlang::parse_expr()
+  }
+  x
+}
+
+rule_expr  <- char_to_expr(tr, 1, model = FALSE)
+model_expr <- char_to_expr(tr, 1, model = TRUE)
+
+# filter the data corresponding to rule 7 FOR THE EXAMPLE 1 FOR ME 
+data1 %>% 
+  dplyr::filter(eval_tidy(rule_expr, data1)) %>%
+  dplyr::mutate(SOC_pred = eval_tidy(model_expr, .)) %>%
+  dplyr::select(SOC, SOC_pred)
+
+
+# Variable Importance
+
+caret::varImp(model_tree)
+
+# or 
+install.packages("vip")
+library(vip)
+vip::vi(model_tree)
+
+
+
+
+
+
+
