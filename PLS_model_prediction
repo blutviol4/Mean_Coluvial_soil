@@ -1,0 +1,146 @@
+#https://koalatea.io/r-pls-regression/
+
+library(MASS)
+library(pls)
+library(caret)
+#uso esta base de datos por que 1. esta tranformada, ya hice variable selection y tengo soc
+data1 <- read.csv("Xcp_Var_selected.csv", header=TRUE, stringsAsFactors=FALSE)
+
+model <- plsr(SOC ~ ., data = data1)
+summary(model)
+
+
+#Modeling Partial Least Squares in R with Caret
+set.seed(1)
+model <- train(
+  SOC ~ .,
+  data = data1,
+  method = 'pls'
+)
+model
+plot(model)
+
+
+#Preprocessing with Caret
+set.seed(1)
+
+library(caret)
+
+model2 <- train(
+  SOC ~ .,
+  data = data1,
+  method = 'pls',
+  preProcess = c("center", "scale")
+)
+model2
+plot(varImp(model2))
+
+#Splitting the Data Set
+#Often when we are modeling, we want to split our data into a train and test set. This way, we can check for overfitting
+
+set.seed(1)
+
+inTraining <- createDataPartition(data1$SOC, p = .70, list = FALSE)
+training <- data1[inTraining,]
+testing  <- data1[-inTraining,]
+
+#SWe can then fit our model again using only the training data
+set.seed(1)
+model3 <- train(
+  SOC ~ .,
+  data = training,
+  method = 'pls',
+  preProcess = c("center", "scale")
+)
+model3
+
+#Now, we want to check our data on the test set. We can use the subset method to get the 
+#features and test target. 
+#We then use the predict method passing in our model from above and the test features.
+
+test.features = subset(testing, select=-c(SOC))
+test.target = subset(testing, select=SOC)[,1]
+
+predictions = predict(model3, newdata = test.features)
+tibble(predictions)
+
+# RMSE
+sqrt(mean((test.target - predictions)^2))
+
+# R2
+cor(test.target, predictions) ^ 2
+
+
+#Cross Validation
+set.seed(1)
+ctrl <- trainControl(
+  method = "cv",
+  number = 10,
+)
+
+set.seed(1)
+
+model4 <- train(
+  SOC ~ .,
+  data = training,
+  method = 'pls',
+  preProcess = c("center", "scale"),
+  trControl = ctrl
+)
+model4
+
+test.features = subset(testing, select=-c(SOC))
+test.target = subset(testing, select=SOC)[,1]
+
+predictions = predict(model4, newdata = test.features)
+
+# RMSE
+sqrt(mean((test.target - predictions)^2))
+# R2
+cor(test.target, predictions) ^ 2
+
+
+# Tuning Hyper Parameters
+
+
+set.seed(1)
+
+tuneGrid <- expand.grid(
+  ncomp   = seq(1, 10, by = 1)
+)
+
+model5 <- train(
+  SOC ~ .,
+  data = training,
+  method = 'pls',
+  preProcess = c("center", "scale"),
+  trControl = ctrl,
+  tuneGrid = tuneGrid
+)
+model5
+
+plot(model5)
+
+save(model5, test.features,testing, training, tuneGrid, file = "pls_new.rda")
+
+nn <- mat[,c(8, 9,14,24,52,76,91,95,97,139,140,143,159,172,184,185,199,207,214,215,243,
+             263,266,311,321,324,331,340,344,353,362,364,406,414,415,445,448,564,566,575,
+             579,582,610,635,671,711,716,722,747,760,778,784,795,802,803)]
+write.csv(nn, "nn2.csv")
+
+data2 <- read.csv("nn2.csv", header=TRUE, stringsAsFactors=FALSE)
+
+
+predictions = predict(model5, newdata = data2)
+
+
+Jess <- as.data.frame(predictions)
+
+tibble(Jess)
+class(predictions)
+
+Coord <- mat[,c(1:2)]
+all <- cbind(Coord, Jess)
+library(raster)
+dfr <- rasterFromXYZ(all)
+plot(dfr)
