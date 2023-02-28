@@ -1,0 +1,25 @@
+rm(list = ls()) # cleanmemory
+
+library(raster)
+library(rgdal)
+library(sf)
+
+############################################################v
+r <- stack("10502_R.tif")
+plot(r)
+#############################################vv
+#values(r) <- runif(ncell(r)) * 10000
+
+values(r) <- runif(ncell(r)) * 10
+
+#####################################################
+crs(r) <- NA
+
+plotRGB(r, r = 620, g = 550, b = 450, scale = 1.2) # importante debo mirar el valor maximo de reflectance y colocarlo alli
+
+mat<-as.data.frame(r,xy=TRUE)
+save(mat, file = "10502_mat.rda")
+
+matr <- as.matrix(r)
+save(matr, file = "10502_matr.rda")
+
