@@ -123,6 +123,9 @@ plot(model5)
 
 save(model5, test.features,testing, training, tuneGrid, file = "pls_new.rda")
 
+#mat dataframe de datos extraidos de la imagen hyperespectral (todos los pixeles)
+# revisar como extrraer los valores del raster. dataframe is not so good idea.
+
 nn <- mat[,c(8, 9,14,24,52,76,91,95,97,139,140,143,159,172,184,185,199,207,214,215,243,
              263,266,311,321,324,331,340,344,353,362,364,406,414,415,445,448,564,566,575,
              579,582,610,635,671,711,716,722,747,760,778,784,795,802,803)]
